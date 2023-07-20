@@ -146,10 +146,13 @@ async fn _run(
     main_config: &mut toml::value::Table,
     transaction: &mut Transaction<'_>,
 ) -> Result<()> {
+    tracing::warn!("Checking for initial setup....");
     if main_config.get("setup").is_none() {
+        tracing::warn!("Not setup....");
         transaction.execute(DB_SETUP_QUERY).await?;
         main_config.insert("setup".into(), true.into());
     } else if main_config.get("translation_url").is_none() {
+        tracing::warn!("is setup....");
         main_config.insert(
             "translation_url".into(),
             "https://api-free.deepl.com/v2".into(),
