@@ -17,7 +17,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-          components: clippy
+          components: clippy,fmt
           profile: minimal
           override: true
 
@@ -47,4 +47,4 @@ jobs:
           override: true
 
       - name: Run cargo fmt
-        run: cargo +nightly fmt --all -- --check
+        run: cargo fmt --all -- --check

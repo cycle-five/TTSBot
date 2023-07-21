@@ -2,6 +2,7 @@
 log_level = 'info'
 #tts_service = instance of https://github.com/GnomedDev/tts-service
 #translation_token = token from https://deepl.com/
+#translation_url = https://api-free.deepl.com/v2/translate
 #main_server_invite = 'https://discord.gg/example'
 #announcements_channel = id here
 #invite_channel = id here
