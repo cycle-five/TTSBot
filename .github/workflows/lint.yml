@@ -17,7 +17,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-          components: clippy,fmt
+          components: clippy
           profile: minimal
           override: true
 
@@ -25,10 +25,11 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Run clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: +nightly -- -D clippy::all -D warnings
+        run: cargo +nightly clippy --all -- -D clippy::all -D warnings
+        # uses: actions-rs/clippy-check@v1
+        # with:
+        #   token: ${{ secrets.GITHUB_TOKEN }}
+        #   args: -- -D clippy::all -D warnings
 
   rustfmt:
     name: Format
