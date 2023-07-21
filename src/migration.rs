@@ -81,6 +81,7 @@ async fn migrate_single_to_modes(
     Ok(())
 }
 
+#[allow(clippy::needless_pass_by_ref_mut)]
 async fn migrate_speaking_rate_to_mode(transaction: &mut Transaction<'_>) -> Result<()> {
     let insert_query = "
         INSERT INTO user_voice(user_id, mode, speaking_rate) VALUES ($1, $2, $3)
