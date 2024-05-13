@@ -95,7 +95,7 @@ pub async fn settings(ctx: Context<'_>) -> CommandResult {
     let target_lang = guild_row.target_lang.as_deref().unwrap_or(none_str);
     let required_role = guild_row.required_role.map(|r| r.mention().to_string());
 
-    let user_mode = if data.premium_check(Some(guild_id)).await?.is_none() {
+    let user_mode = if data.is_premium_simple(guild_id).await? {
         userinfo_row.premium_voice_mode
     } else {
         userinfo_row.voice_mode
@@ -339,7 +339,7 @@ where
     let data = ctx.data();
     if let Some(mode) = mode
         && mode.is_premium()
-        && data.premium_check(Some(guild_id)).await?.is_some()
+        && !data.is_premium_simple(guild_id).await?
     {
         ctx.send(poise::CreateReply::default().embed(CreateEmbed::default()
             .title("TTS Bot Premium")
@@ -522,6 +522,17 @@ pub async fn bot_ban(ctx: Context<'_>, user: serenity::UserId, value: bool) -> C
     Ok(())
 }
 
+fn replace_bool(ctx: Context<'_>, original: &str, value: bool) -> String {
+    ctx.gettext(original).replace(
+        "{}",
+        if value {
+            ctx.gettext("Enabled")
+        } else {
+            ctx.gettext("Disabled")
+        },
+    )
+}
+
 async fn generic_bool_command(
     ctx: Context<'_>,
     key: &'static str,
@@ -529,20 +540,12 @@ async fn generic_bool_command(
     resp: &'static str,
 ) -> CommandResult {
     let value = require!(bool_button(ctx, value).await?, Ok(()));
-    let resp = ctx.gettext(resp).replace(
-        "{}",
-        if value {
-            ctx.gettext("Enabled")
-        } else {
-            ctx.gettext("Disabled")
-        },
-    );
 
-    ctx.data()
-        .guilds_db
-        .set_one(ctx.guild_id().unwrap().into(), key, &value)
-        .await?;
-    ctx.say(resp).await?;
+    let guilds_db = &ctx.data().guilds_db;
+    let guild_id = ctx.guild_id().unwrap();
+
+    guilds_db.set_one(guild_id.into(), key, &value).await?;
+    ctx.say(replace_bool(ctx, resp, value)).await?;
 
     Ok(())
 }
@@ -632,6 +635,26 @@ create_bool_command!(
     aliases("translate", "to_translate", "should_translate"),
     check = "crate::premium_command_check",
 );
+
+/// Enables the experimental new message formatting
+#[poise::command(
+    prefix_command,
+    slash_command,
+    required_bot_permissions = "SEND_MESSAGES"
+)]
+async fn use_new_formatting(
+    ctx: Context<'_>,
+    #[description = "Whether to use the experimental new message formatting"] value: bool,
+) -> CommandResult {
+    let id = ctx.author().id.into();
+    let userinfo = &ctx.data().userinfo_db;
+
+    userinfo.set_one(id, "use_new_formatting", value).await?;
+
+    let resp = ctx.gettext("Experimental new message formatting is now: {}");
+    ctx.say(replace_bool(ctx, resp, value)).await?;
+    Ok(())
+}
 
 /// Changes the required role to use the bot.
 #[poise::command(
@@ -1166,8 +1189,6 @@ pub async fn mode(
     let author_id = ctx.author().id.into();
     let guild_id = ctx.guild_id().unwrap();
 
-    let guild_is_premium = data.premium_check(Some(guild_id)).await?.is_none();
-
     let to_send = change_mode(
         &ctx,
         &data.userinfo_db,
@@ -1175,7 +1196,7 @@ pub async fn mode(
         author_id,
         mode.map(TTSMode::from),
         Target::User,
-        guild_is_premium,
+        data.is_premium_simple(guild_id).await?,
     )
     .await?;
 
@@ -1460,6 +1481,7 @@ pub fn commands() -> [Command; 5] {
                 command_prefix(),
                 block(),
                 bot_ban(),
+                use_new_formatting(),
             ],
             ..set()
         },

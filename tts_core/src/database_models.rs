@@ -5,7 +5,7 @@ use typesize::derive::TypeSize;
 
 use poise::serenity_prelude::{ChannelId, GuildId, RoleId, UserId};
 
-use crate::structs::TTSMode;
+use crate::structs::{IsPremium, TTSMode};
 
 const MAX_VOICE_LENGTH: usize = 20;
 
@@ -67,9 +67,10 @@ pub struct GuildRow {
 }
 
 impl GuildRow {
-    pub fn target_lang(&self) -> Option<&str> {
+    pub fn target_lang(&self, is_premium: IsPremium) -> Option<&str> {
         if let Some(target_lang) = &self.target_lang
             && self.to_translate()
+            && is_premium.into()
         {
             Some(target_lang.as_str())
         } else {
@@ -111,6 +112,7 @@ pub struct UserRowRaw {
     pub dm_blocked: bool,
     pub dm_welcomed: bool,
     pub bot_banned: bool,
+    pub use_new_formatting: bool,
     pub voice_mode: Option<TTSMode>,
     pub premium_voice_mode: Option<TTSMode>,
 }
@@ -121,6 +123,7 @@ pub struct UserRow {
     pub dm_blocked: bool,
     pub dm_welcomed: bool,
     pub bot_banned: bool,
+    pub use_new_formatting: bool,
     pub voice_mode: Option<TTSMode>,
     pub premium_voice_mode: Option<TTSMode>,
 }
@@ -136,6 +139,7 @@ impl Compact for UserRowRaw {
         .set_dm_blocked(self.dm_blocked)
         .set_dm_welcomed(self.dm_welcomed)
         .set_bot_banned(self.bot_banned)
+        .set_use_new_formatting(self.use_new_formatting)
     }
 }
 

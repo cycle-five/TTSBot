@@ -12,7 +12,7 @@ use tts_core::{
     errors,
     opt_ext::OptionTryUnwrap,
     require,
-    structs::{Data, FrameworkContext, JoinVCToken, Result, TTSMode},
+    structs::{Data, FrameworkContext, IsPremium, JoinVCToken, Result, TTSMode},
     traits::SongbirdManagerExt,
 };
 
@@ -47,6 +47,7 @@ async fn process_tts_msg(
         Ok(())
     );
 
+    let is_premium = data.is_premium_simple(guild_id).await?;
     let (voice, mode) = {
         if let Some(channel_id) = to_autojoin {
             let join_vc_lock = JoinVCToken::acquire(&data, guild_id);
@@ -72,8 +73,9 @@ async fn process_tts_msg(
         };
 
         let (voice, mode) = data
-            .parse_user_or_guild(message.author.id, Some(guild_id))
+            .parse_user_or_guild_with_premium(message.author.id, Some((guild_id, is_premium)))
             .await?;
+
         let nickname_row = data
             .nickname_db
             .get([guild_id.into(), message.author.id.into()])
@@ -90,12 +92,20 @@ async fn process_tts_msg(
             guild_row.xsaid(),
             guild_row.repeated_chars,
             nickname_row.name.as_deref(),
+            user_row.use_new_formatting(),
             &data.regex_cache,
             &data.last_to_xsaid_tracker,
         );
 
         (voice, mode)
     };
+
+    // Final check, make sure we aren't sending an empty message or just symbols.
+    let mut removed_chars_content = content.clone();
+    removed_chars_content.retain(|c| !" ?.)'!\":".contains(c));
+    if removed_chars_content.is_empty() {
+        return Ok(());
+    }
 
     let speaking_rate = data.speaking_rate(message.author.id, mode).await?;
     let url = prepare_url(
@@ -105,7 +115,7 @@ async fn process_tts_msg(
         mode,
         &speaking_rate,
         &guild_row.msg_length.to_arraystring(),
-        guild_row.target_lang(),
+        guild_row.target_lang(IsPremium::from(is_premium)),
     );
 
     let call_lock = if let Some(call) = data.songbird.get(guild_id) {
@@ -226,7 +236,10 @@ async fn process_mention_msg(
 
     if permissions.send_messages() {
         channel
-            .say(ctx, format!("Current prefix for this server is: {prefix}"))
+            .say(
+                &ctx.http,
+                format!("Current prefix for this server is: {prefix}"),
+            )
             .await?;
     } else {
         let msg = {
@@ -287,9 +300,9 @@ async fn process_support_dm(
                 )
             };
 
-            channel.say(&ctx, content).await?;
+            channel.say(&ctx.http, content).await?;
         } else if content.as_str() == "help" {
-            channel.say(&ctx, "We cannot help you unless you ask a question, if you want the help command just do `-help`!").await?;
+            channel.say(&ctx.http, "We cannot help you unless you ask a question, if you want the help command just do `-help`!").await?;
         } else if !userinfo.dm_blocked() {
             let webhook_username = format!("{} ({})", message.author.tag(), message.author.id);
 
@@ -353,7 +366,7 @@ async fn process_support_dm(
             .set_one(message.author.id.into(), "dm_welcomed", &true)
             .await?;
         if channel.pins(&ctx.http).await?.len() < 50 {
-            welcome_msg.pin(ctx, None).await?;
+            welcome_msg.pin(&ctx.http, None).await?;
         }
 
         info!(
@@ -415,7 +428,7 @@ async fn process_support_response(
 
     channel
         .send_message(
-            ctx,
+            &ctx.http,
             CreateMessage::default()
                 .content(content)
                 .embed(CreateEmbed::from(embed)),
