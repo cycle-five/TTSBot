@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         rust-version: ['nightly']
-        cache-key: ['']
+        cache-key: ['build']
     runs-on: ubuntu-latest
     steps:
       - name: Repository Checkout
@@ -21,7 +21,7 @@ jobs:
           rustup default ${{ matrix.rust-version }}
         shell: bash
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v3
         with:
           shared-key: ${{ matrix.cache-key }}
       
@@ -38,16 +38,8 @@ jobs:
 
       - name: Run Unit Tests
         if: github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/tags/')
-        run: cargo test
-
-      - name: Run Release Unit Tests
-        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
-        run: cargo test --release --locked
-
-      - name: Build Binary
-        if: github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/tags/')
-        run: cargo build --locked
+        run: cargo +nightly test
 
       - name: Build Release Binary
         if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
-        run: cargo build --release --locked
+        run: cargo +nightly build --release

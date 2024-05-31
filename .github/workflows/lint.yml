@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         rust-version: ['nightly']
-        cache-key: ['']
+        cache-key: ['lint']
     runs-on: ubuntu-latest
 
     steps:
@@ -24,14 +24,14 @@ jobs:
         shell: bash
 
       - name: Cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v3
 
       - name: Run clippy
         if: success() || failure()
-        run: cargo clippy --all -- -D clippy::all -D warnings
+        run: cargo +nightly clippy --all -- -D clippy::all -D warnings
         # uses: actions-rs/clippy-check@v1
         # with:
         #   token: ${{ secrets.GITHUB_TOKEN }}
         #   args: -- -D clippy::all -D warnings
       - name: Run cargo fmt
-        run: cargo fmt --all -- --check
+        run: cargo +nightly fmt --all -- --check
