@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-libc = "0.2.152"
+libc = "0.2.154"
 
 poise = { workspace = true }
 tokio = { workspace = true }
