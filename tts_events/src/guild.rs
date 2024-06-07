@@ -10,6 +10,8 @@ pub async fn guild_create(
     guild: &serenity::Guild,
     is_new: Option<bool>,
 ) -> Result<()> {
+    return Ok(());
+
     if !is_new.unwrap() {
         return Ok(());
     };
