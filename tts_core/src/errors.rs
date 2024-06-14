@@ -162,6 +162,9 @@ pub async fn handle_unexpected<'a>(
     author_name: Option<&str>,
     icon_url: Option<&str>,
 ) -> Result<()> {
+    eprintln!("{error:?}");
+    return Ok(());
+
     let data = poise_context.user_data();
     let ctx = poise_context.serenity_context;
 
